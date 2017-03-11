@@ -1,0 +1,51 @@
+version: '2'
+services:
+    web:
+        build: frontend
+        depends_on:
+            - app
+        environment:
+            - VIRTUAL_HOST=${VIRTUAL_HOST}
+            - CERTBOT_EMAIL=staticfloat@gmail.com
+        ports:
+            - 443:443/tcp
+            - 80:80/tcp
+    app:
+        image: indiehosters/discourse
+        depends_on:
+            - postgres
+            - redis
+        volumes:
+            - app_assets:/usr/src/app/public/assets
+            - app_uploads:/usr/src/app/public/uploads
+            - app_backups:/usr/src/app/public/backups
+        env_file:
+            - ./env
+        environment:
+            - DISCOURSE_HOSTNAME=${VIRTUAL_HOST}
+    sidekiq:
+        image: indiehosters/discourse
+        command: bundle exec sidekiq -q critical -q default -q low -v
+        env_file:
+            - ./env
+        environment:
+            - DISCOURSE_HOSTNAME=${VIRTUAL_HOST}
+        depends_on:
+            - postgres
+            - redis
+        volumes_from:
+            - app
+    postgres:
+        image: postgres:9.4.8
+        env_file:
+            - ./env
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+    redis:
+        image: redis:3
+volumes:
+    postgres_data:
+    app_assets:
+    app_uploads:
+    app_backups:
+
